@@ -240,7 +240,8 @@ namespace drawingTest
             //nb.MouseHover += new EventHandler(nodeBox_MouseHover);
             //nb.MouseLeave += new EventHandler(nodeBox_MouseLeave);
 
-            nb.Location = MousePosition;
+            //nb.Location = new Point(MousePosition.X - panel1.Location.X, MousePosition.Y - panel1.Location.Y);
+            nb.Location = panel1.PointToClient(MousePosition);
 
             panel1.Controls.Add(nb);
         }
