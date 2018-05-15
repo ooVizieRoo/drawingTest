@@ -40,13 +40,15 @@ namespace drawingTest
         /// Выбранный инструмент редактора.
         /// </summary>
         State state;
-        
+        List<NodeBox> selectedNBs;
         public Form1()
         {
             InitializeComponent();
 
             state = State.Select;
             btnTopologySelect.Enabled = false;
+
+            selectedNBs = new List<NodeBox>();
         }
 
         private void setNBEvents()
@@ -62,14 +64,16 @@ namespace drawingTest
                 {
                     case State.Select:
                         {
-                            //nb.MouseClick     -= new MouseEventHandler(nodeBox_MouseClick);
+                            nb.MouseUp          -= new MouseEventHandler(nodeBox_MoveFinished);
+
+                            nb.MouseClick       -= new MouseEventHandler(nodeBox_MouseClickOnConnect);
                             nb.MouseClick       -= new MouseEventHandler(nodeBox_MouseClickOnDelete);
                             nb.MouseDown        += new MouseEventHandler(nodeBox_MouseDown);
-                            nb.MouseMove        += new MouseEventHandler(nodeBox_MouseMove);
-                            nb.MouseUp          += new MouseEventHandler(nodeBox_MouseUp);
-                            nb.Move             += new EventHandler(nodeBox_Move);
                             nb.MouseHover       += new EventHandler(nodeBox_MouseHover);
                             nb.MouseLeave       += new EventHandler(nodeBox_MouseLeave);
+                            nb.MouseMove        += new MouseEventHandler(nodeBox_MouseMove);
+                            nb.MouseUp          += new MouseEventHandler(nodeBox_MouseUp);
+                            nb.MouseUp          += new MouseEventHandler(nodeBox_MoveFinished);
 
                             panel1.Click        -= new EventHandler(AddNode);
 
@@ -77,29 +81,29 @@ namespace drawingTest
                         }
                     case State.AddNode:
                         {
-                            //nb.MouseClick     += new MouseEventHandler(nodeBox_MouseClick);
+                            nb.MouseUp          -= new MouseEventHandler(nodeBox_MoveFinished);
+
+                            nb.MouseClick       -= new MouseEventHandler(nodeBox_MouseClickOnConnect);
                             nb.MouseClick       -= new MouseEventHandler(nodeBox_MouseClickOnDelete);
                             nb.MouseDown        -= new MouseEventHandler(nodeBox_MouseDown);
-                            nb.MouseMove        -= new MouseEventHandler(nodeBox_MouseMove);
-                            nb.MouseUp          -= new MouseEventHandler(nodeBox_MouseUp);
-                            nb.Move             -= new EventHandler(nodeBox_Move);
                             nb.MouseHover       -= new EventHandler(nodeBox_MouseHover);
                             nb.MouseLeave       -= new EventHandler(nodeBox_MouseLeave);
-
+                            nb.MouseMove        -= new MouseEventHandler(nodeBox_MouseMove);
+                            nb.MouseUp          -= new MouseEventHandler(nodeBox_MouseUp);
+                            nb.MouseUp          += new MouseEventHandler(nodeBox_MoveFinished);
 
                             break;
                         }
                     case State.Connect:
                         {
-
-                            //nb.MouseClick     += new MouseEventHandler(nodeBox_MouseClick);
+                            nb.MouseClick       += new MouseEventHandler(nodeBox_MouseClickOnConnect);
                             nb.MouseClick       -= new MouseEventHandler(nodeBox_MouseClickOnDelete);
                             nb.MouseDown        -= new MouseEventHandler(nodeBox_MouseDown);
-                            nb.MouseMove        -= new MouseEventHandler(nodeBox_MouseMove);
-                            nb.MouseUp          -= new MouseEventHandler(nodeBox_MouseUp);
-                            nb.Move             -= new EventHandler(nodeBox_Move);
                             nb.MouseHover       += new EventHandler(nodeBox_MouseHover);
                             nb.MouseLeave       += new EventHandler(nodeBox_MouseLeave);
+                            nb.MouseMove        -= new MouseEventHandler(nodeBox_MouseMove);
+                            nb.MouseUp          -= new MouseEventHandler(nodeBox_MouseUp);
+                            nb.MouseUp          -= new MouseEventHandler(nodeBox_MoveFinished);
 
                             panel1.Click        -= new EventHandler(AddNode);
 
@@ -107,14 +111,14 @@ namespace drawingTest
                         }
                     case State.Delete:
                         {
-                            //nb.MouseClick     -= new MouseEventHandler(nodeBox_MouseClick);
+                            nb.MouseClick       -= new MouseEventHandler(nodeBox_MouseClickOnConnect);
                             nb.MouseClick       += new MouseEventHandler(nodeBox_MouseClickOnDelete);
                             nb.MouseDown        -= new MouseEventHandler(nodeBox_MouseDown);
-                            nb.MouseMove        -= new MouseEventHandler(nodeBox_MouseMove);
-                            nb.MouseUp          -= new MouseEventHandler(nodeBox_MouseUp);
-                            nb.Move             -= new EventHandler(nodeBox_Move);
                             nb.MouseHover       += new EventHandler(nodeBox_MouseHover);
                             nb.MouseLeave       += new EventHandler(nodeBox_MouseLeave);
+                            nb.MouseMove        -= new MouseEventHandler(nodeBox_MouseMove);
+                            nb.MouseUp          -= new MouseEventHandler(nodeBox_MouseUp);
+                            nb.MouseUp          -= new MouseEventHandler(nodeBox_MoveFinished);
 
                             panel1.Click        -= new EventHandler(AddNode);
 
@@ -125,15 +129,27 @@ namespace drawingTest
             }
 
             if (state == State.AddNode)
+            {
                 panel1.Click += new EventHandler(AddNode);
+            }
         }
+        
+        private void resetSelection()
+        {
+            var nbs = panel1.Controls.OfType<NodeBox>().Cast<NodeBox>().Where(nb => nb.IsSelected == true).ToList();
 
+            foreach(NodeBox nb in nbs)
+            {
+                nb.IsSelected = false;
+                nb.BorderStyle = BorderStyle.FixedSingle;
+            }
+        }
 
         private void panel1_Click(object sender, EventArgs e)
         {
-            Graphics g = this.CreateGraphics();
+            //Graphics g = this.CreateGraphics();
             
-            g.DrawLine(new Pen(Color.Red), 10, 10, 100, 100);
+            //g.DrawLine(new Pen(Color.Red), 10, 10, 100, 100);
         }
 
         private void nodeBox_MouseDown(object sender, MouseEventArgs e)
@@ -144,62 +160,18 @@ namespace drawingTest
             mouseOffset = e.Location;
         }
 
-        private void nodeBox_MouseMove(object sender, MouseEventArgs e)
-        {
-            var nb = (NodeBox)sender;
-
-            if (nb.IsDown)
-            {
-                Point mouse = MousePosition;
-
-                Point pnt = new Point(mouse.X - (mouseOffset.X), mouse.Y - (mouseOffset.Y));
-
-                nb.Location = panel1.PointToClient(pnt);
-            }
-        }
-
         private void nodeBox_MouseUp(object sender, MouseEventArgs e)
         {
             var nb = (NodeBox)sender;
             nb.IsDown = false;
         }
 
-        private void nodeBox_Move(object sender, EventArgs e)
-        {
-            var nb = (NodeBox)sender;
-
-            if (nb.Location.X < 0)
-            {
-                nb.Location = new Point(0, nb.Location.Y);
-                nb.IsDown = false;
-            }
-
-            if (nb.Location.Y < 0)
-            {
-                nb.Location = new Point(nb.Location.X, 0);
-                nb.IsDown = false;
-            }
-
-            int critSize = panel1.Size.Width - nb.Size.Width - 4;
-            if (nb.Location.X > critSize)
-            {
-                nb.Location = new Point(critSize, nb.Location.Y);
-                nb.IsDown = false;
-            }
-
-            critSize = panel1.Size.Height - nb.Size.Height - 4;
-            if (nb.Location.Y > critSize)
-            {
-                nb.Location = new Point(nb.Location.X, critSize);
-                nb.IsDown = false;
-            }
-        }
-
         private void nodeBox_MouseHover(object sender, EventArgs e)
         {
             var nb = (NodeBox)sender;
             
-            nb.BorderStyle = BorderStyle.Fixed3D;
+            if (!nb.IsSelected)
+                nb.BorderStyle = BorderStyle.Fixed3D;
         }
 
         private void nodeBox_MouseLeave(object sender, EventArgs e)
@@ -228,20 +200,16 @@ namespace drawingTest
             btnTopologySelect.Enabled = true;
 
             setNBEvents();
+            resetSelection();
         }
 
         private void AddNode(object sender, EventArgs e)
         {
             NodeBox nb = new NodeBox();
-            //nb.MouseDown += new MouseEventHandler(nodeBox_MouseDown);
-            //nb.MouseMove += new MouseEventHandler(nodeBox_MouseMove);
-            //nb.MouseUp += new MouseEventHandler(nodeBox_MouseUp);
-            //nb.Move += new EventHandler(nodeBox_Move);
-            //nb.MouseHover += new EventHandler(nodeBox_MouseHover);
-            //nb.MouseLeave += new EventHandler(nodeBox_MouseLeave);
 
-            //nb.Location = new Point(MousePosition.X - panel1.Location.X, MousePosition.Y - panel1.Location.Y);
-            nb.Location = panel1.PointToClient(MousePosition);
+            // Вычисление точки, для помещения центра узла посередине курсора
+            Point mousePosition = new Point(MousePosition.X - nb.CenterPoint.X, MousePosition.Y - nb.CenterPoint.Y);
+            nb.Location = panel1.PointToClient(mousePosition);
 
             panel1.Controls.Add(nb);
         }
@@ -256,6 +224,39 @@ namespace drawingTest
             btnTopologySelect.Enabled = true;
 
             setNBEvents();
+            resetSelection();
+        }
+
+        private void nodeBox_MouseClickOnConnect(object sender, MouseEventArgs e)
+        {
+            var nb = (NodeBox)sender;
+            nb.IsSelected = !nb.IsSelected;
+            
+            if(nb.IsSelected)
+            {
+                nb.BorderStyle = BorderStyle.Fixed3D;
+                selectedNBs.Add(nb);
+
+                switch (selectedNBs.Count)
+                {
+                    case 0: { break; }
+                    case 1: { break; }
+                    case 2:
+                        {
+                            Graphics g = panel1.CreateGraphics();
+                            g.DrawLine(new Pen(Color.Red), selectedNBs[0].CenterLocation, selectedNBs[1].CenterLocation);
+
+                            selectedNBs = new List<NodeBox>();
+                            break;
+                        }
+                    default: { throw new Exception("Эксепшон!!!1"); }
+                }
+            }
+            else
+            {
+                nb.BorderStyle = BorderStyle.FixedSingle;
+                selectedNBs.Remove(nb);
+            }
         }
 
         private void btnTopologySelect_Click(object sender, EventArgs e)
@@ -268,6 +269,53 @@ namespace drawingTest
             btnTopologySelect.Enabled = false;
 
             setNBEvents();
+            resetSelection();
+        }
+
+        private void nodeBox_MouseMove(object sender, MouseEventArgs e)
+        {
+            var nb = (NodeBox)sender;
+
+            if (nb.IsDown)
+            {
+                Point mouse = MousePosition;
+
+                Point pnt = new Point(mouse.X - (mouseOffset.X), mouse.Y - (mouseOffset.Y));
+
+                nb.Location = panel1.PointToClient(pnt);
+            }
+        }
+
+        private void nodeBox_MoveFinished(object sender, MouseEventArgs e)
+        {
+            var nb = (NodeBox)sender;
+
+            //while (notTruePosition)
+            if (nb.Location.X < 0)
+            {
+                nb.Location = new Point(0, nb.Location.Y);
+                nb.IsDown = false;
+            }
+
+            if (nb.Location.Y < 0)
+            {
+                nb.Location = new Point(nb.Location.X, 0);
+                nb.IsDown = false;
+            }
+
+            int critSize = panel1.Size.Width - nb.Size.Width - 4;
+            if (nb.Location.X > critSize)
+            {
+                nb.Location = new Point(critSize, nb.Location.Y);
+                nb.IsDown = false;
+            }
+
+            critSize = panel1.Size.Height - nb.Size.Height - 4;
+            if (nb.Location.Y > critSize)
+            {
+                nb.Location = new Point(nb.Location.X, critSize);
+                nb.IsDown = false;
+            }
         }
 
         private void btnTopologyDelete_Click(object sender, EventArgs e)
@@ -280,6 +328,7 @@ namespace drawingTest
             btnTopologySelect.Enabled = true;
 
             setNBEvents();
+            resetSelection();
         }
     }
 }
