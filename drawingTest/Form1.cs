@@ -41,6 +41,9 @@ namespace drawingTest
         /// </summary>
         State state;
         List<NodeBox> selectedNBs;
+        Graphics g;
+        List<Edge> listOfEdges;
+
         public Form1()
         {
             InitializeComponent();
@@ -49,6 +52,9 @@ namespace drawingTest
             btnTopologySelect.Enabled = false;
 
             selectedNBs = new List<NodeBox>();
+            g = panel1.CreateGraphics();
+            listOfEdges = new List<Edge>();
+            DoubleBuffered = true;
         }
 
         private void setNBEvents()
@@ -74,9 +80,10 @@ namespace drawingTest
                             nb.MouseMove        += new MouseEventHandler(nodeBox_MouseMove);
                             nb.MouseUp          += new MouseEventHandler(nodeBox_MouseUp);
                             nb.MouseUp          += new MouseEventHandler(nodeBox_MoveFinished);
+                            //nb.Move             += new EventHandler(nodeBox_MoveStarted);
+                            nb.Paint            += new PaintEventHandler(nodeBox_OnPaint);
 
                             panel1.Click        -= new EventHandler(AddNode);
-
                             break;
                         }
                     case State.AddNode:
@@ -91,6 +98,7 @@ namespace drawingTest
                             nb.MouseMove        -= new MouseEventHandler(nodeBox_MouseMove);
                             nb.MouseUp          -= new MouseEventHandler(nodeBox_MouseUp);
                             nb.MouseUp          += new MouseEventHandler(nodeBox_MoveFinished);
+                            nb.Move             -= new EventHandler(nodeBox_MoveStarted);
 
                             break;
                         }
@@ -104,6 +112,8 @@ namespace drawingTest
                             nb.MouseMove        -= new MouseEventHandler(nodeBox_MouseMove);
                             nb.MouseUp          -= new MouseEventHandler(nodeBox_MouseUp);
                             nb.MouseUp          -= new MouseEventHandler(nodeBox_MoveFinished);
+                            nb.Move             -= new EventHandler(nodeBox_MoveStarted);
+
 
                             panel1.Click        -= new EventHandler(AddNode);
 
@@ -119,6 +129,7 @@ namespace drawingTest
                             nb.MouseMove        -= new MouseEventHandler(nodeBox_MouseMove);
                             nb.MouseUp          -= new MouseEventHandler(nodeBox_MouseUp);
                             nb.MouseUp          -= new MouseEventHandler(nodeBox_MoveFinished);
+                            nb.Move             -= new EventHandler(nodeBox_MoveStarted);
 
                             panel1.Click        -= new EventHandler(AddNode);
 
@@ -143,13 +154,6 @@ namespace drawingTest
                 nb.IsSelected = false;
                 nb.BorderStyle = BorderStyle.FixedSingle;
             }
-        }
-
-        private void panel1_Click(object sender, EventArgs e)
-        {
-            //Graphics g = this.CreateGraphics();
-            
-            //g.DrawLine(new Pen(Color.Red), 10, 10, 100, 100);
         }
 
         private void nodeBox_MouseDown(object sender, MouseEventArgs e)
@@ -185,8 +189,16 @@ namespace drawingTest
         private void nodeBox_MouseClickOnDelete(object sender, MouseEventArgs e)
         {
             var nb = (NodeBox)sender;
+            
+            //Удаление ребер для несуществующих связей
+            foreach(Edge edge in listOfEdges.Where(_e => _e.listOfNodeBoxes.Contains(nb)).ToList())
+            {
+                listOfEdges.Remove(edge);
+            }
+            panel1.Invalidate();
 
             panel1.Controls.Remove(nb);
+
             nb = null;
         }
 
@@ -212,6 +224,14 @@ namespace drawingTest
             nb.Location = panel1.PointToClient(mousePosition);
 
             panel1.Controls.Add(nb);
+        }
+
+        private void nodeBox_OnPaint(object sender, PaintEventArgs e)
+        {
+            panel1.Invalidate(true);
+
+            foreach (Edge edge in listOfEdges)
+                g.DrawLine(new Pen(Color.Red, 3), edge.listOfNodeBoxes[0].CenterLocation, edge.listOfNodeBoxes[1].CenterLocation);
         }
 
         private void btnTopologyAddDependency_Click(object sender, EventArgs e)
@@ -243,8 +263,17 @@ namespace drawingTest
                     case 1: { break; }
                     case 2:
                         {
-                            Graphics g = panel1.CreateGraphics();
-                            g.DrawLine(new Pen(Color.Red), selectedNBs[0].CenterLocation, selectedNBs[1].CenterLocation);
+                            g.DrawLine(new Pen(Color.Red, 3), selectedNBs[0].CenterLocation, selectedNBs[1].CenterLocation);
+
+                            selectedNBs[0].IsSelected = false;
+                            //selectedNBs[0].listOfNbDependencies.Add(selectedNBs[1]);
+                            selectedNBs[0].resetGraphicalSelection();
+
+                            selectedNBs[1].IsSelected = false;
+                            //selectedNBs[1].listOfNbDependencies.Add(selectedNBs[0]);
+                            selectedNBs[1].resetGraphicalSelection();
+
+                            listOfEdges.Add(new Edge(selectedNBs[0], selectedNBs[1]));
 
                             selectedNBs = new List<NodeBox>();
                             break;
@@ -284,6 +313,19 @@ namespace drawingTest
 
                 nb.Location = panel1.PointToClient(pnt);
             }
+        }
+
+        private void nodeBox_MoveStarted(object sender, EventArgs e)
+        {
+            //var nb = (NodeBox)sender;
+            //panel1.Refresh();
+
+            //foreach (NodeBox _nb in nb.listOfNbDependencies)
+            //    g.DrawLine(new Pen(Color.Red, 3), nb.CenterLocation, _nb.CenterLocation);
+
+            //foreach(Edge edge in listOfEdges)
+            //    g.DrawLine(new Pen(Color.Red, 3), edge.listOfNodeBoxes[0].CenterLocation, edge.listOfNodeBoxes[1].CenterLocation);
+
         }
 
         private void nodeBox_MoveFinished(object sender, MouseEventArgs e)
